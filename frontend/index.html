@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>OpenSpec Visualizer</title>
+    <link rel="stylesheet" href="style.css?v=3">
+</head>
+<body>
+    <div class="titlebar"></div>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                OpenSpec <span>PRO</span>
+            </div>
+            <ul class="nav">
+                <li class="nav-item active" id="nav-workflow">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                    工作流引擎
+                </li>
+                <li class="nav-item" id="nav-files">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                    产物区 (Files)
+                </li>
+                <li class="nav-item" id="nav-settings">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    连接大模型
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="workspace">
+            
+            <!-- Setup View -->
+            <div id="view-settings" class="view hidden">
+                <h1>AI Configuration</h1>
+                <div class="card">
+                    <p style="color:var(--text-muted); margin-bottom:24px; font-size:14px; line-height:1.6;">
+                        连接您的 OpenAI 兼容服务以启动真正的意图萃取与任务拆解。<br>
+                        如果您暂未提供此配置，引擎将回退至 <b>Mock Mode</b> 演示模式。
+                    </p>
+                    <div class="form-group">
+                        <label>Feature Name (用于创建本地文件夹命名)</label>
+                        <input type="text" id="cfg-feature" placeholder="例如：feature-user-profile">
+                    </div>
+                    <div class="form-group">
+                        <label>Base URL</label>
+                        <input type="text" id="cfg-url" placeholder="https://api.openai.com/v1">
+                    </div>
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <input type="password" id="cfg-key" placeholder="sk-...">
+                    </div>
+                    <div class="form-group">
+                        <label>Model</label>
+                        <input type="text" id="cfg-model" placeholder="gpt-4">
+                    </div>
+                    <button class="btn btn-primary" id="btn-save-cfg">保存应用全局配置</button>
+                </div>
+            </div>
+
+            <!-- Workflow View -->
+            <div id="view-workflow" class="view">
+                <h1>Execution Pipeline</h1>
+                
+                <div class="flow-stages">
+                    <div class="stage active" id="s1">
+                        <div class="stage-num">1</div>
+                        <div class="stage-content">
+                            <h3>起草变更提案 (Proposal & Intent)</h3>
+                            <p>输入自然语言需求，AI将自动调用 <code>/openspec:proposal</code> 解析您的意图并提纯规范上下文。</p>
+                            <div id="s1-action" style="margin-top: 16px;">
+                                <textarea id="prompt-input" rows="4" placeholder="例如：为角色和团队添加搜索与过滤器功能..."></textarea>
+                                <button class="btn btn-primary" style="margin-top: 12px;" id="btn-start">驱动引擎运行</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage" id="s2">
+                        <div class="stage-num">2</div>
+                        <div class="stage-content">
+                            <h3>审查与对齐 (Align & Specification)</h3>
+                            <p>系统自动推演 <code>specs/</code> 需求规格与差分设计。对应内部命令：<code>openspec validate</code>。</p>
+                            <div id="s2-action" class="hidden">
+                                <div class="thinking-box">
+                                    <div class="spinner"></div>
+                                    <h4 style="font-size:14px; color:var(--text-main);">AI正在解析上下文并拆解 Given/When/Then 逻辑...</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage" id="s3">
+                        <div class="stage-num">3</div>
+                        <div class="stage-content">
+                            <h3>任务化沉淀与虚拟实施 (Implementation Breakdown)</h3>
+                            <p>将高度抽象的契约打散为可被追踪的、具有原子性的复选框任务。模拟 <code>/openspec:apply</code> 执行。</p>
+                            <div id="s3-action" class="hidden">
+                                <div class="thinking-box">
+                                    <div class="spinner"></div>
+                                    <h4 style="font-size:14px; color:var(--text-main);">正在降维转换为 task.md 执行清单并落盘文件...</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage" id="s4">
+                        <div class="stage-num">4</div>
+                        <div class="stage-content">
+                            <h3>闭环构建与落盘 (Archiving & File Sync)</h3>
+                            <p>合并批准的变更并写入物理硬盘的 <code>openspec/</code> 目录结构，完成闭环记录与封卷操作。</p>
+                            <div id="s4-action" class="hidden" style="margin-top: 16px;">
+                                <div style="padding: 12px; background: rgba(0, 112, 243, 0.1); border-radius: 6px; color: var(--blue); font-size: 13px; font-weight: 500;">
+                                    ✓ 已成功完成流程并归档至本地文件系统。
+                                </div>
+                                <button class="btn btn-secondary" style="margin-top: 12px;" id="btn-view-files">前往产物区浏览生成文件</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File Explorer View -->
+            <div id="view-files" class="view hidden">
+                <h1>Filesystem Output</h1>
+                <p style="color:var(--text-muted); font-size:14px; margin-bottom: 24px;">
+                    所有的提案、规范、任务均已映射同步至本地硬盘实体路径。<br>
+                    目录根节点：<code>openspec/</code>
+                </p>
+                <div class="file-layout">
+                    <div class="file-tree" id="file-tree-container">
+                        <div style="font-size:12px; color:var(--text-muted); padding: 8px;">Waiting for scan...</div>
+                    </div>
+                    <div class="file-viewer" id="file-viewer">
+                        <div style="color:var(--text-muted); font-size:13px; display:flex; height:100%; align-items:center; justify-content:center;">
+                            从左侧点击文件以预览源码
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script type="module" src="main.js?v=3"></script>
+</body>
+</html>
