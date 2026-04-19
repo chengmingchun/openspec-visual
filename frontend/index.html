@@ -62,57 +62,43 @@
 
             <!-- Workflow View -->
             <div id="view-workflow" class="view">
-                <h1>Execution Pipeline</h1>
+                <h1>执行监控大盘 (Agent Dashboard)</h1>
+                <p style="color:var(--text-muted); font-size:14px; margin-bottom: 24px;">
+                    系统正以监听模式 (Port: 38192) 捕获本地 Agent 的行为回调。<br>
+                    请在编辑器中触发 Agent，其产生的文件写入和状态变更将在此实时可视化呈现。
+                </p>
                 
-                <div class="flow-stages">
-                    <div class="stage active" id="s1">
+                <div class="flow-stages" id="flow-stages">
+                    <div class="stage" id="s1" data-skill="propose">
                         <div class="stage-num">1</div>
                         <div class="stage-content">
                             <h3>起草变更提案 (Proposal & Intent)</h3>
-                            <p>输入自然语言需求，AI将自动调用 <code>/openspec:proposal</code> 解析您的意图并提纯规范上下文。</p>
-                            <div id="s1-action" style="margin-top: 16px;">
-                                <textarea id="prompt-input" rows="4" placeholder="例如：为角色和团队添加搜索与过滤器功能..."></textarea>
-                                <button class="btn btn-primary" style="margin-top: 12px;" id="btn-start">驱动引擎运行</button>
-                            </div>
+                            <p>解析意图并提取规范上下文：生成 <code>proposal.md</code></p>
+                            <div class="stage-logs hidden"></div>
                         </div>
                     </div>
-                    <div class="stage" id="s2">
+                    <div class="stage" id="s2" data-skill="validate">
                         <div class="stage-num">2</div>
                         <div class="stage-content">
                             <h3>审查与对齐 (Align & Specification)</h3>
-                            <p>系统自动推演 <code>specs/</code> 需求规格与差分设计。对应内部命令：<code>openspec validate</code>。</p>
-                            <div id="s2-action" class="hidden">
-                                <div class="thinking-box">
-                                    <div class="spinner"></div>
-                                    <h4 style="font-size:14px; color:var(--text-main);">AI正在解析上下文并拆解 Given/When/Then 逻辑...</h4>
-                                </div>
-                            </div>
+                            <p>生成 <code>specs/</code> 需求规格与差分设计：生成 <code>spec.md</code></p>
+                            <div class="stage-logs hidden"></div>
                         </div>
                     </div>
-                    <div class="stage" id="s3">
+                    <div class="stage" id="s3" data-skill="apply">
                         <div class="stage-num">3</div>
                         <div class="stage-content">
                             <h3>任务化沉淀与虚拟实施 (Implementation Breakdown)</h3>
-                            <p>将高度抽象的契约打散为可被追踪的、具有原子性的复选框任务。模拟 <code>/openspec:apply</code> 执行。</p>
-                            <div id="s3-action" class="hidden">
-                                <div class="thinking-box">
-                                    <div class="spinner"></div>
-                                    <h4 style="font-size:14px; color:var(--text-main);">正在降维转换为 task.md 执行清单并落盘文件...</h4>
-                                </div>
-                            </div>
+                            <p>降维转换为离散实现任务：生成 <code>tasks.md</code> 并实施</p>
+                            <div class="stage-logs hidden"></div>
                         </div>
                     </div>
-                    <div class="stage" id="s4">
+                    <div class="stage" id="s4" data-skill="archive">
                         <div class="stage-num">4</div>
                         <div class="stage-content">
                             <h3>闭环构建与落盘 (Archiving & File Sync)</h3>
-                            <p>合并批准的变更并写入物理硬盘的 <code>openspec/</code> 目录结构，完成闭环记录与封卷操作。</p>
-                            <div id="s4-action" class="hidden" style="margin-top: 16px;">
-                                <div style="padding: 12px; background: rgba(0, 112, 243, 0.1); border-radius: 6px; color: var(--blue); font-size: 13px; font-weight: 500;">
-                                    ✓ 已成功完成流程并归档至本地文件系统。
-                                </div>
-                                <button class="btn btn-secondary" style="margin-top: 12px;" id="btn-view-files">前往产物区浏览生成文件</button>
-                            </div>
+                            <p>封卷合入主干并记录历史</p>
+                            <div class="stage-logs hidden"></div>
                         </div>
                     </div>
                 </div>

@@ -375,3 +375,34 @@ pre {
     white-space: pre-wrap;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
+
+/* Agent Logs Dashboard */
+.stage-logs {
+    margin-top: 12px;
+    background: #fdfdfd;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+}
+.log-entry {
+    margin-bottom: 4px;
+    color: var(--text-main);
+}
+.log-entry:last-child {
+    margin-bottom: 0;
+}
+.log-time {
+    color: var(--text-muted);
+    margin-right: 8px;
+}
+.log-status {
+    color: var(--blue);
+    margin-right: 8px;
+    font-weight: 500;
+}
+.log-file {
+    color: var(--accent);
+}
+

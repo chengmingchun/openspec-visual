@@ -1,4 +1,4 @@
-package main
+package service
 
 import (
 	"fmt"
@@ -6,10 +6,18 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"openspec-visualizer/domain"
 )
 
+type FSService struct{}
+
+func NewFSService() *FSService {
+	return &FSService{}
+}
+
 // GenerateOpenSpecStructure creates the folder structure and writes mock/real data
-func (o *OpenSpecService) GenerateOpenSpecStructure(featureName string, content string) error {
+func (s *FSService) GenerateOpenSpecStructure(featureName string, content string) error {
 	if featureName == "" {
 		featureName = "new-feature"
 	}
@@ -18,17 +26,17 @@ func (o *OpenSpecService) GenerateOpenSpecStructure(featureName string, content 
 	
 	baseDir := "openspec"
 	
-	// Create changes dir
+	// Create changes dir (idempotent due to MkdirAll)
 	changesDir := filepath.Join(baseDir, "changes", featureName)
 	specsDir := filepath.Join(changesDir, "specs")
 	if err := os.MkdirAll(specsDir, 0755); err != nil {
-		return err
+		return fmt.Errorf("failed to create specs dir: %w", err)
 	}
 
 	// Create root specs dir
 	rootSpecsDir := filepath.Join(baseDir, "specs", "auth")
 	if err := os.MkdirAll(rootSpecsDir, 0755); err != nil {
-		return err
+		return fmt.Errorf("failed to create root specs dir: %w", err)
 	}
 
 	// Write proposal
@@ -59,31 +67,31 @@ func (o *OpenSpecService) GenerateOpenSpecStructure(featureName string, content 
 		ioutil.WriteFile(projectPath, []byte("# 项目级别约定\n\n- 缩进: 4空格\n- API响应: RESTful JSON\n- AI契约引擎: OpenSpec v1\n"), 0644)
 	}
 
+	// 动态注入规则/工作流配置 .cursorrules
+	cursorRulesPath := ".cursorrules"
+	cursorRulesContent := "{\n  \"workflows\": [\"openspec-visualizer reporting\"]\n}\n"
+	if _, err := os.Stat(cursorRulesPath); os.IsNotExist(err) {
+		ioutil.WriteFile(cursorRulesPath, []byte(cursorRulesContent), 0644)
+	}
+
 	return nil
 }
 
-type FileNode struct {
-	Name     string      `json:"name"`
-	Path     string      `json:"path"`
-	IsDir    bool        `json:"isDir"`
-	Children []*FileNode `json:"children"`
-}
-
-func (o *OpenSpecService) ListOpenSpecFiles() (*FileNode, error) {
+func (s *FSService) ListOpenSpecFiles() (*domain.FileNode, error) {
 	baseDir := "openspec"
 	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
-		return nil, nil
+		return nil, nil // Return nil if it doesn't exist to avoid error spam
 	}
 	return buildTree(baseDir)
 }
 
-func buildTree(path string) (*FileNode, error) {
+func buildTree(path string) (*domain.FileNode, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
-	node := &FileNode{
+	node := &domain.FileNode{
 		Name:  info.Name(),
 		Path:  filepath.ToSlash(path),
 		IsDir: info.IsDir(),
@@ -105,7 +113,7 @@ func buildTree(path string) (*FileNode, error) {
 	return node, nil
 }
 
-func (o *OpenSpecService) ReadFileContent(path string) (string, error) {
+func (s *FSService) ReadFileContent(path string) (string, error) {
 	if !strings.HasPrefix(filepath.ToSlash(path), "openspec") {
 		return "", fmt.Errorf("非 openspec 核心目录，禁止跨目录读取")
 	}

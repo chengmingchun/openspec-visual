@@ -1,4 +1,4 @@
-package main
+package service
 
 import (
 	"bytes"
@@ -8,45 +8,52 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"openspec-visualizer/domain"
 )
 
-type LLMConfig struct {
-	APIKey  string `json:"apiKey"`
-	BaseURL string `json:"baseUrl"`
-	Model   string `json:"model"`
+type LLMService struct {
+	configCache *domain.LLMConfig
 }
 
-var configCache *LLMConfig
+func NewLLMService() *LLMService {
+	return &LLMService{}
+}
 
-func getConfigPath() string {
+func (s *LLMService) getConfigPath() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".openspec-visualizer.json")
 }
 
-func LoadLLMConfig() LLMConfig {
-	if configCache != nil {
-		return *configCache
+func (s *LLMService) LoadLLMConfig() domain.LLMConfig {
+	if s.configCache != nil {
+		return *s.configCache
 	}
-	path := getConfigPath()
+	path := s.getConfigPath()
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return LLMConfig{BaseURL: "https://api.openai.com/v1", Model: "gpt-3.5-turbo"}
+		return domain.LLMConfig{BaseURL: "https://api.openai.com/v1", Model: "gpt-3.5-turbo"}
 	}
-	var c LLMConfig
+	var c domain.LLMConfig
 	json.Unmarshal(data, &c)
-	configCache = &c
+	s.configCache = &c
 	return c
 }
 
-func SaveLLMConfig(c LLMConfig) error {
-	path := getConfigPath()
+func (s *LLMService) SaveLLMConfig(apiKey, baseUrl, model string) error {
+	c := domain.LLMConfig{
+		APIKey:  apiKey,
+		BaseURL: baseUrl,
+		Model:   model,
+	}
+	path := s.getConfigPath()
 	data, _ := json.MarshalIndent(c, "", "  ")
-	configCache = &c
+	s.configCache = &c
 	return ioutil.WriteFile(path, data, 0644)
 }
 
-func SendPrompt(prompt string, systemPrompt string) (string, error) {
-	c := LoadLLMConfig()
+func (s *LLMService) SendPrompt(prompt string, systemPrompt string) (string, error) {
+	c := s.LoadLLMConfig()
 	if c.APIKey == "" {
 		return "", fmt.Errorf("未配置 API Key，请先进入设置填写。")
 	}
@@ -55,7 +62,6 @@ func SendPrompt(prompt string, systemPrompt string) (string, error) {
 	if url == "" {
 		url = "https://api.openai.com/v1"
 	}
-	// Trim trailing slash
 	if len(url) > 0 && url[len(url)-1] == '/' {
 		url = url[:len(url)-1]
 	}

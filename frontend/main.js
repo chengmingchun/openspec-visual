@@ -18,13 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const s3 = document.getElementById('s3');
     const s4 = document.getElementById('s4');
     
-    const s2act = document.getElementById('s2-action');
-    const s3act = document.getElementById('s3-action');
-    const s4act = document.getElementById('s4-action');
-    const s1act = document.getElementById('s1-action');
-
-    const promptInput = document.getElementById('prompt-input');
-    const btnStart = document.getElementById('btn-start');
+    // Removed legacy button constants
     const btnViewFiles = document.getElementById('btn-view-files');
     const fileTreeContainer = document.getElementById('file-tree-container');
     const fileViewer = document.getElementById('file-viewer');
@@ -85,77 +79,78 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    btnStart.onclick = async () => {
-        const prompt = promptInput.value.trim();
-        if (!prompt) {
-            alert("Please input a feature request.");
-            return;
-        }
+    let lastReportCount = 0;
 
-        const featureName = cfgFeature.value.trim() || "new-feature";
-        
-        // Stage 1 -> 2
-        s1.classList.remove('active');
-        s1.classList.add('completed');
-        s1act.classList.add('hidden');
-        
-        s2.classList.add('active');
-        s2act.classList.remove('hidden');
-
-        // AI Request Simulation / Real Wait
-        let aiResult = "MOCK_MODE";
-        if (apiKeyStr) {
+    async function pollAgentReports() {
+        if (!viewWorkflow.classList.contains('hidden')) {
             try {
-                const res = await fetch("http://127.0.0.1:38192/api/prompt", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ Prompt: prompt, System: "You are OpenSpec analyst." })
-                });
-                if (!res.ok) {
-                    throw new Error(await res.text());
+                const res = await fetch("http://127.0.0.1:38192/api/reports");
+                if (res.ok) {
+                    const reports = await res.json();
+                    if (reports && reports.length > lastReportCount) {
+                        lastReportCount = reports.length;
+                        updateDashboardStages(reports);
+                    }
                 }
-                const data = await res.json();
-                aiResult = data.result;
-            } catch(e) {
-                console.error(e);
-                alert("大模型请求失败: " + e);
+            } catch (e) {
+                // Silently fail during poll
             }
-        } else {
-            await new Promise(r => setTimeout(r, 4000));
+        }
+    }
+
+    function updateDashboardStages(reports) {
+        const skillToStage = {
+            'propose': 's1',
+            'validate': 's2',
+            'apply': 's3',
+            'archive': 's4'
+        };
+
+        const stages = ['s1', 's2', 's3', 's4'];
+        
+        let highestStageIndex = -1;
+        reports.forEach(r => {
+            const sid = skillToStage[r.skill_name];
+            if (sid) {
+                const idx = stages.indexOf(sid);
+                if (idx > highestStageIndex) highestStageIndex = idx;
+            }
+        });
+
+        for (let i = 0; i < stages.length; i++) {
+            const el = document.getElementById(stages[i]);
+            const logPanel = el.querySelector('.stage-logs');
+            
+            if (i < highestStageIndex) {
+                el.className = 'stage completed';
+                logPanel.classList.remove('hidden');
+            } else if (i === highestStageIndex) {
+                el.className = 'stage active';
+                logPanel.classList.remove('hidden');
+            } else {
+                el.className = 'stage';
+            }
         }
 
-        // Stage 2 -> 3
-        s2.classList.remove('active');
-        s2.classList.add('completed');
-        s2act.classList.add('hidden');
-
-        s3.classList.add('active');
-        s3act.classList.remove('hidden');
-
-        // Task & File generation
-        await new Promise(r => setTimeout(r, 4000)); // Simulating writing longer
-        try {
-            const res = await fetch("http://127.0.0.1:38192/api/generate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ FeatureName: featureName, Content: prompt })
-            });
-            if (!res.ok) {
-                alert("写入核心文件警告: " + await res.text());
+        stages.forEach(sid => {
+            const el = document.getElementById(sid);
+            const logPanel = el.querySelector('.stage-logs');
+            const targetSkill = el.getAttribute('data-skill');
+            const relatedReports = reports.filter(r => skillToStage[r.skill_name] === sid || (targetSkill === 'propose' && !skillToStage[r.skill_name])); 
+            
+            if (relatedReports.length > 0) {
+                logPanel.innerHTML = relatedReports.map(r => `
+                    <div class="log-entry">
+                        <span class="log-time">${new Date().toLocaleTimeString()}</span>
+                        <span class="log-status">[${r.status}]</span>
+                        <span class="log-file">${r.file_path || ''}</span>
+                    </div>
+                `).join('');
             }
-        } catch(e) {
-            console.error("Write error:", e);
-            alert("文件落盘通讯失败: " + e);
-        }
+        });
+    }
 
-        // Stage 3 -> 4
-        s3.classList.remove('active');
-        s3.classList.add('completed');
-        s3act.classList.add('hidden');
-
-        s4.classList.add('active');
-        s4act.classList.remove('hidden');
-    };
+    setInterval(pollAgentReports, 1500);
 
     // File Tree Fetch & Render
     async function refreshFileTree() {
