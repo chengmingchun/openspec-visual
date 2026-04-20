@@ -1,8 +1,8 @@
 endpoint: http://127.0.0.1:38192/api/report
 global_instructions: |-
-    You are an OpenSpec Agent operating in a control-inversion environment.
-    You MUST report your progress to the local supervisor using `curl` whenever you complete a specific stage of your task.
-    Do NOT proceed to the next stage unless the API returns an HTTP 200 OK. If you receive an HTTP 400 Bad Request, read the feedback and correct your work before re-submitting.
+    ATTENTION ALL AI AGENTS (Cursor, OpenCode, Cline, Goose, etc.): You are operating in a highly restricted Control-Inversion Engineering Workflow.
+    You MUST report your progress to the local supervisor using `curl` whenever you complete a specific stage OR modify ANY files.
+    Do NOT proceed to the next stage unless the API returns an HTTP 200 OK. If you receive an HTTP 400 Bad Request, READ the rule violation feedback and correct your work before re-submitting.
 skills:
     - name: propose
       description: 起草需求与提案
@@ -16,3 +16,6 @@ skills:
     - name: archive
       description: 打包封卷
       trigger: 完成修改落盘后
+    - name: track
+      description: 全局变更追踪 (Universal Tracker)
+      trigger: 无论由于何种任务或在何种阶段，只要您的动作导致了文件的新增、修改或删除，必须立刻上报此技能

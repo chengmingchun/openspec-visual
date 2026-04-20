@@ -24,12 +24,13 @@ func (s *ConfigService) EnsureAgentConfig(baseDir string) (domain.AgentConfig, e
 	
 	defaultConfig := domain.AgentConfig{
 		Endpoint: "http://127.0.0.1:38192/api/report",
-		GlobalInstructions: "You are an OpenSpec Agent operating in a control-inversion environment.\nYou MUST report your progress to the local supervisor using `curl` whenever you complete a specific stage of your task.\nDo NOT proceed to the next stage unless the API returns an HTTP 200 OK. If you receive an HTTP 400 Bad Request, read the feedback and correct your work before re-submitting.",
+		GlobalInstructions: "ATTENTION ALL AI AGENTS (Cursor, OpenCode, Cline, Goose, etc.): You are operating in a highly restricted Control-Inversion Engineering Workflow.\nYou MUST report your progress to the local supervisor using `curl` whenever you complete a specific stage OR modify ANY files.\nDo NOT proceed to the next stage unless the API returns an HTTP 200 OK. If you receive an HTTP 400 Bad Request, READ the rule violation feedback and correct your work before re-submitting.",
 		Skills: []domain.AgentSkill{
 			{Name: "propose", Description: "起草需求与提案", Trigger: "完成 proposal.md 编写后"},
 			{Name: "validate", Description: "校验和细化规格", Trigger: "完成 specs/ 规格文件拆解后"},
 			{Name: "apply", Description: "编码与实现", Trigger: "完成 tasks.md 编码任务后"},
 			{Name: "archive", Description: "打包封卷", Trigger: "完成修改落盘后"},
+			{Name: "track", Description: "全局变更追踪 (Universal Tracker)", Trigger: "无论由于何种任务或在何种阶段，只要您的动作导致了文件的新增、修改或删除，必须立刻上报此技能"},
 		},
 	}
 
@@ -59,7 +60,7 @@ func (s *ConfigService) InjectCursorRules(baseDir string, config domain.AgentCon
   "workflows": ["openspec-visualizer reporting"]
 }
 
-# OpenSpec Agent Directives
+# OpenSpec Universal Agent Directives (Applicable to Cursor, OpenCode, etc.)
 {{.GlobalInstructions}}
 
 ## Reporting Endpoint
@@ -70,7 +71,7 @@ You must invoke the progress reporter at the completion of these triggers:
 {{range .Skills}}
 - Skill: {{.Name}} ({{.Description}})
   Trigger: {{.Trigger}}
-  Action: Run ` + "`" + `curl -X POST {{$.Endpoint}} -H "Content-Type: application/json" -d '{"skill_name":"{{.Name}}","status":"completed","file_path":"auto-inferred"}'` + "`" + ` and wait for 200 OK.
+  Action: Run ` + "`" + `curl -X POST {{$.Endpoint}} -H "Content-Type: application/json" -d '{"skill_name":"{{.Name}}","status":"completed","file_path":"<the_modified_file_path>"}'` + "`" + ` and wait for 200 OK.
 {{end}}
 `
 	

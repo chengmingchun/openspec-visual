@@ -83,3 +83,11 @@ type PendingReport struct {
 	Request       ReportRequest   `json:"request"`
 	CheckerResult []CheckerResult `json:"checker_results"`
 }
+
+// CommitLog represents git history node
+type CommitLog struct {
+	Hash    string `json:"hash"`
+	Message string `json:"message"`
+	Author  string `json:"author"`
+	Date    string `json:"date"`
+}

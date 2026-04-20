@@ -38,6 +38,11 @@ func SetupRouter(h *Handlers) *fiber.App {
 	api.Get("/pending", h.GetPending)
 	api.Post("/review", h.SubmitReview)
 	
+	// History Endpoints
+	api.Get("/history", h.GetHistory)
+	api.Get("/diff", h.GetDiff)
+	api.Post("/rollback", h.Rollback)
+	
 	// Legacy endpoints mapping
 	api.Get("/config", h.GetConfig)
 	api.Post("/config", h.PostConfig)
@@ -143,6 +148,51 @@ func (h *Handlers) Read(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 	return c.SendString(data)
+}
+
+func (h *Handlers) ReadFile(c *fiber.Ctx) error {
+	pathStr := c.Query("path")
+	if pathStr == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Missing path")
+	}
+
+	content, err := h.fsService.ReadFileContent(pathStr)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+	}
+	return c.SendString(content)
+}
+
+func (h *Handlers) GetHistory(c *fiber.Ctx) error {
+	history, err := h.archiveService.GetHistory()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+	}
+	return c.JSON(history)
+}
+
+func (h *Handlers) GetDiff(c *fiber.Ctx) error {
+	hash := c.Query("hash")
+	if hash == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Hash required")
+	}
+	diff, err := h.archiveService.GetDiff(hash)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+	}
+	return c.SendString(diff)
+}
+
+func (h *Handlers) Rollback(c *fiber.Ctx) error {
+	hash := c.Query("hash")
+	if hash == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Hash required")
+	}
+	err := h.archiveService.Rollback(hash)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+	}
+	return c.SendStatus(fiber.StatusOK)
 }
 
 func (h *Handlers) Prompt(c *fiber.Ctx) error {

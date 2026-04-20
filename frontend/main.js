@@ -35,6 +35,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnApprove = document.getElementById('btn-approve');
     const btnReject = document.getElementById('btn-reject');
 
+    // History Panel Elements
+    const historyTimelineNav = document.getElementById('history-timeline-nav');
+    const diffViewer = document.getElementById('diff-viewer');
+    const btnRollback = document.getElementById('btn-rollback');
+    let selectedCommitHash = "";
+
     let apiKeyStr = "";
     let hasConfig = false;
 
@@ -71,6 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (view === 'history') {
             viewHistory.classList.remove('hidden');
             navHistory.classList.add('active');
+            refreshHistory();
         } else {
             viewWorkflow.classList.remove('hidden');
             navWorkflow.classList.add('active');
@@ -169,19 +176,73 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `).join('');
             }
         });
-
-        // Update History Timeline View
-        const historyTimeline = document.getElementById('history-timeline');
-        if (reports.length > 0) {
-            historyTimeline.innerHTML = reports.map((r, idx) => `
-                <div style="border-left: 2px solid var(--accent); padding-left: 16px; margin-bottom: 24px; position: relative;">
-                    <div style="position: absolute; left: -5px; top: 0; width: 8px; height: 8px; background: var(--accent); border-radius: 50%;"></div>
-                    <div style="font-weight: 500; font-family: monospace; font-size: 13px; color: var(--text-main);">迭代拦截位 #${idx+1}： 触发技能 <b>[${r.skill_name}]</b></div>
-                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">🎯 拦截节点：执行状态 [${r.status}]；相关文件：<code>${r.file_path || 'Unknown'}</code></div>
-                </div>
-            `).reverse().join('');
-        }
     }
+
+    // Git Fetch & Render
+    window.loadDiff = async (hash) => {
+        selectedCommitHash = hash;
+        btnRollback.style.display = 'inline-block';
+        diffViewer.innerHTML = '<div style="color:#888; text-align:center;">Fetching patch...</div>';
+        try {
+            const res = await fetch("http://127.0.0.1:38192/api/diff?hash=" + hash);
+            const text = await res.text();
+            if (!text) {
+                diffViewer.innerHTML = '<div style="color:#888; text-align:center;">(Empty diff)</div>';
+                return;
+            }
+            const html = escapeHtml(text).split('\\n').map(line => {
+                if (line.startsWith('+')) return `<div style="color: green; background:#e6ffec;">${line}</div>`;
+                if (line.startsWith('-')) return `<div style="color: red; background:#ffebe9;">${line}</div>`;
+                if (line.startsWith('@@')) return `<div style="color: #0969da; background:#ddf4ff; margin: 4px 0;">${line}</div>`;
+                return `<div>${line}</div>`;
+            }).join('');
+            diffViewer.innerHTML = html;
+        } catch(e) {
+            diffViewer.innerHTML = 'Error loading git diff.';
+        }
+    };
+
+    async function refreshHistory() {
+        try {
+            const res = await fetch("http://127.0.0.1:38192/api/history");
+            if (res.ok) {
+                const logs = await res.json();
+                if (logs && logs.length > 0) {
+                    historyTimelineNav.innerHTML = logs.map((l, idx) => `
+                        <div class="commit-card" onclick="loadDiff('${l.hash}')" style="border-left: 2px solid var(--accent); padding-left: 16px; margin-bottom: 24px; position: relative; cursor:pointer;">
+                            <div style="position: absolute; left: -5px; top: 0; width: 8px; height: 8px; background: var(--accent); border-radius: 50%;"></div>
+                            <div style="font-weight: 500; font-family: monospace; font-size: 13px; color: var(--text-main);">📌 版本快照：${l.hash.substring(0,7)}</div>
+                            <div style="font-size: 12px; color: var(--accent); margin-top: 4px;">📝 ${escapeHtml(l.message)}</div>
+                            <div style="font-size: 11px; color: #888; margin-top: 2px;">🕰️ ${new Date(l.date).toLocaleString()} by ${escapeHtml(l.author)}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    historyTimelineNav.innerHTML = '<div style="color:#888;text-align:center;">暂无任何变更记录长廊数据。</div>';
+                }
+            }
+        } catch(e) {}
+    }
+
+    btnRollback.onclick = async () => {
+        if (!selectedCommitHash) return;
+        if (confirm("🚨 危险隔离操作！\\n\\n确定要将项目目录规范强制抹除并撤回至节点 " + selectedCommitHash.substring(0,7) + " 吗？\\n此动作相当于时间逆流，会彻底删掉 Agent 在此之后的胡言乱语产物！")) {
+            try {
+                const res = await fetch("http://127.0.0.1:38192/api/rollback?hash=" + selectedCommitHash, {method: 'POST'});
+                if (res.ok) {
+                    alert('回滚成功！本地硬盘状态已强行重置！');
+                    refreshHistory();
+                    refreshFileTree();
+                    selectedCommitHash = '';
+                    btnRollback.style.display = 'none';
+                    diffViewer.innerHTML = '<div style="color:#888; text-align:center;">回滚重置成功！工作区已降级！</div>';
+                } else {
+                    alert('回滚执行失败！');
+                }
+            } catch(e) {
+                alert('回滚请求异常');
+            }
+        }
+    };
 
     let isReviewPanelOpen = false;
 

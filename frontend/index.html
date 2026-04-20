@@ -145,12 +145,23 @@
             </div>
 
             <!-- History View -->
-            <div id="view-history" class="view hidden">
-                <h1>设计变更追踪长廊 (Change Tracker)</h1>
-                <p style="color:var(--text-muted); font-size:14px; margin-bottom: 24px;">此处记载每一次 Agent 向系统提交的状态、文件修改历史及自动化巡检放行痕迹，让研发全链路可溯源。</p>
-                <div style="background:var(--sidebar); border: 1px solid var(--border); border-radius:6px; padding:20px;">
-                    <div id="history-timeline" style="margin-top: 8px;">
-                        <div style="color:var(--text-muted); font-size:13px; text-align:center;">暂无任何变更记录流...</div>
+            <div id="view-history" class="view hidden" style="display:flex; gap: 24px;">
+                <div style="flex:1;">
+                    <h1>设计变更追踪栈 (Git Timeline)</h1>
+                    <p style="color:var(--text-muted); font-size:14px; margin-bottom: 24px;">此处记载由于 Agent 合并操作而产生的文件修改记录快照。</p>
+                    <div style="background:var(--sidebar); border: 1px solid var(--border); border-radius:6px; padding:20px;">
+                        <div id="history-timeline-nav" style="margin-top: 8px; max-height:480px; overflow-y:auto; overflow-x:hidden;">
+                            <div style="color:var(--text-muted); font-size:13px; text-align:center;">暂无任何提交流...</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column;">
+                    <h3 style="margin-top:0;">差异与回滚 (Diff & Revert)</h3>
+                    <div id="diff-viewer" style="flex:1; background:#fff; border:1px solid var(--border); border-radius:6px; padding:16px; font-family:monospace; font-size:12px; overflow:auto; margin-top:8px;">
+                        <div style="color:var(--text-muted); text-align:center; padding-top:20px;">点击左侧版本节点查看差异明细</div>
+                    </div>
+                    <div style="margin-top: 12px; text-align:right;">
+                        <button id="btn-rollback" class="btn btn-primary" style="display:none; background:#e00; border-color:#d00;">⚠️ 强制回滚规范至此快照 (Rollback)</button>
                     </div>
                 </div>
             </div>
