@@ -1,0 +1,32 @@
+
+{
+  "workflows": ["openspec-visualizer reporting"]
+}
+
+# OpenSpec Agent Directives
+You are an OpenSpec Agent operating in a control-inversion environment.
+You MUST report your progress to the local supervisor using `curl` whenever you complete a specific stage of your task.
+Do NOT proceed to the next stage unless the API returns an HTTP 200 OK. If you receive an HTTP 400 Bad Request, read the feedback and correct your work before re-submitting.
+
+## Reporting Endpoint
+Your reporting endpoint is: http://127.0.0.1:38192/api/report
+
+## Allowed Skills & Progress Reporting
+You must invoke the progress reporter at the completion of these triggers:
+
+- Skill: propose (起草需求与提案)
+  Trigger: 完成 proposal.md 编写后
+  Action: Run `curl -X POST http://127.0.0.1:38192/api/report -H "Content-Type: application/json" -d '{"skill_name":"propose","status":"completed","file_path":"auto-inferred"}'` and wait for 200 OK.
+
+- Skill: validate (校验和细化规格)
+  Trigger: 完成 specs/ 规格文件拆解后
+  Action: Run `curl -X POST http://127.0.0.1:38192/api/report -H "Content-Type: application/json" -d '{"skill_name":"validate","status":"completed","file_path":"auto-inferred"}'` and wait for 200 OK.
+
+- Skill: apply (编码与实现)
+  Trigger: 完成 tasks.md 编码任务后
+  Action: Run `curl -X POST http://127.0.0.1:38192/api/report -H "Content-Type: application/json" -d '{"skill_name":"apply","status":"completed","file_path":"auto-inferred"}'` and wait for 200 OK.
+
+- Skill: archive (打包封卷)
+  Trigger: 完成修改落盘后
+  Action: Run `curl -X POST http://127.0.0.1:38192/api/report -H "Content-Type: application/json" -d '{"skill_name":"archive","status":"completed","file_path":"auto-inferred"}'` and wait for 200 OK.
+

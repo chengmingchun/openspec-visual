@@ -35,6 +35,8 @@ func SetupRouter(h *Handlers) *fiber.App {
 
 	api.Post("/report", h.HandleReport)
 	api.Get("/reports", h.GetReports)
+	api.Get("/pending", h.GetPending)
+	api.Post("/review", h.SubmitReview)
 	
 	// Legacy endpoints mapping
 	api.Get("/config", h.GetConfig)
@@ -70,11 +72,34 @@ func (h *Handlers) HandleReport(c *fiber.Ctx) error {
 }
 
 func (h *Handlers) GetReports(c *fiber.Ctx) error {
-	if mockRev, ok := h.reviewer.(*service.MockReviewer); ok {
-		reports := mockRev.GetReports()
+	if rev, ok := h.reviewer.(*service.InteractiveReviewer); ok {
+		reports := rev.GetReports()
 		return c.JSON(reports)
 	}
 	return c.JSON([]domain.ReportRequest{})
+}
+
+func (h *Handlers) GetPending(c *fiber.Ctx) error {
+	if rev, ok := h.reviewer.(*service.InteractiveReviewer); ok {
+		pending := rev.GetPending()
+		if pending != nil {
+			return c.JSON(pending)
+		}
+	}
+	return c.JSON(fiber.Map{})
+}
+
+func (h *Handlers) SubmitReview(c *fiber.Ctx) error {
+	var dec domain.ReviewDecision
+	if err := c.BodyParser(&dec); err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid JSON")
+	}
+
+	if rev, ok := h.reviewer.(*service.InteractiveReviewer); ok {
+		rev.SubmitDecision(dec)
+		return c.SendStatus(fiber.StatusOK)
+	}
+	return c.SendStatus(fiber.StatusInternalServerError)
 }
 
 func (h *Handlers) GetConfig(c *fiber.Ctx) error {

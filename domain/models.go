@@ -38,3 +38,48 @@ type ReportResponse struct {
 type Reviewer interface {
 	Review(req ReportRequest) (*ReportResponse, error)
 }
+
+// AgentSkill defines a capability of the Agent
+type AgentSkill struct {
+	Name        string `yaml:"name"`
+	Description string `yaml:"description"`
+	Trigger     string `yaml:"trigger"`
+}
+
+// AgentConfig maps to openspec.yaml
+type AgentConfig struct {
+	Endpoint           string       `yaml:"endpoint"`
+	GlobalInstructions string       `yaml:"global_instructions"`
+	Skills             []AgentSkill `yaml:"skills"`
+}
+
+// ReviewDecision represents the user's manual response
+type ReviewDecision struct {
+	Approved bool   `json:"approved"`
+	Feedback string `json:"feedback"`
+}
+
+// TDDRule represents a single rule logic for TDD validation
+type TDDRule struct {
+	Name        string `yaml:"name"`
+	Description string `yaml:"description"`
+	Regex       string `yaml:"regex"`
+}
+
+// TDDConfig represents tdd_rules.yaml
+type TDDConfig struct {
+	Rules []TDDRule `yaml:"rules"`
+}
+
+// CheckerResult represents the result of evaluating a TDDRule
+type CheckerResult struct {
+	RuleName string `json:"rule_name"`
+	Passed   bool   `json:"passed"`
+	Message  string `json:"message"`
+}
+
+// PendingReport wraps the agent report with automated checker results
+type PendingReport struct {
+	Request       ReportRequest   `json:"request"`
+	CheckerResult []CheckerResult `json:"checker_results"`
+}

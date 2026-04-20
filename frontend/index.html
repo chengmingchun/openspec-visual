@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>OpenSpec Visualizer</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
@@ -16,11 +17,19 @@
             <ul class="nav">
                 <li class="nav-item active" id="nav-workflow">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
-                    工作流引擎
+                    执行大盘 (Dashboard)
+                </li>
+                <li class="nav-item" id="nav-tdd">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    TDD 评审室
+                </li>
+                <li class="nav-item" id="nav-history">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    变更追踪长廊
                 </li>
                 <li class="nav-item" id="nav-files">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                    产物区 (Files)
+                    产物沉淀库
                 </li>
                 <li class="nav-item" id="nav-settings">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
@@ -104,6 +113,48 @@
                 </div>
             </div>
 
+            <!-- TDD View -->
+            <div id="view-tdd" class="view hidden">
+                <h1>TDD 评审工作台 (Iteration Gatekeeper)</h1>
+                <p style="color:var(--text-muted); font-size:14px; margin-bottom: 24px;">
+                    多方工程防御系统。Agent 提交的文件将在这里被正则规则集与自动化机器人抽查。<br>您可以阅读机器预检结果，并决定拦截回退还是放行。
+                </p>
+
+                <!-- TDD Multi-Party Review Panel -->
+                <div id="pending-review-panel" class="hidden" style="margin-top: 12px; padding: 20px; border: 2px solid var(--accent); border-radius: 8px; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h2 style="margin:0; color:var(--accent);">⚖️ 待多方评审拦截 (Pending TDD Block)</h2>
+                        <span id="pending-skill-badge" style="background:var(--accent); color:#fff; padding:4px 8px; border-radius:4px; font-size:12px; font-weight: 500;">SKILL</span>
+                    </div>
+                    <p style="color:var(--text-muted); font-size:13px; margin: 8px 0 16px;">Agent 已挂起！请审阅 TDD 规范机器人的预检日志并做出裁断：</p>
+                    
+                    <div id="bot-checks" style="margin-bottom: 16px; background:var(--sidebar); padding:12px; border-radius:6px; font-family:monospace; font-size:12px; max-height: 250px; overflow-y: auto;"></div>
+
+                    <textarea id="review-feedback" rows="4" placeholder="如需打回重做，请填写指示（例如：缺少错误重试边界代码，请重写；或格式不符合要求）..." style="width:100%; box-sizing:border-box; border:1px solid var(--border); border-radius:4px; padding:8px; font-family:inherit; margin-bottom: 12px;"></textarea>
+
+                    <div style="display:flex; gap: 12px;">
+                        <button id="btn-approve" class="btn btn-primary" style="flex:1; background:var(--success); border-color:var(--success);">✅ 机器校验无误，批准放行</button>
+                        <button id="btn-reject" class="btn btn-secondary" style="flex:1; border-color:var(--border);">❌ 存在缺陷，打回并强制要求 Agent 迭代</button>
+                    </div>
+                </div>
+
+                <div id="no-review-placeholder" style="margin-top: 24px; padding: 40px; text-align: center; color: var(--text-muted); border: 2px dashed var(--border); border-radius: 8px;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.3; margin-bottom:12px;"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><br>
+                    当前没有任何被挂起的拦截请求。<br>请在您的编辑器内触发 Agent 执行工作流，TDD 拦截网将在此处自动激活。
+                </div>
+            </div>
+
+            <!-- History View -->
+            <div id="view-history" class="view hidden">
+                <h1>设计变更追踪长廊 (Change Tracker)</h1>
+                <p style="color:var(--text-muted); font-size:14px; margin-bottom: 24px;">此处记载每一次 Agent 向系统提交的状态、文件修改历史及自动化巡检放行痕迹，让研发全链路可溯源。</p>
+                <div style="background:var(--sidebar); border: 1px solid var(--border); border-radius:6px; padding:20px;">
+                    <div id="history-timeline" style="margin-top: 8px;">
+                        <div style="color:var(--text-muted); font-size:13px; text-align:center;">暂无任何变更记录流...</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- File Explorer View -->
             <div id="view-files" class="view hidden">
                 <h1>Filesystem Output</h1>
@@ -115,9 +166,12 @@
                     <div class="file-tree" id="file-tree-container">
                         <div style="font-size:12px; color:var(--text-muted); padding: 8px;">Waiting for scan...</div>
                     </div>
-                    <div class="file-viewer" id="file-viewer">
-                        <div style="color:var(--text-muted); font-size:13px; display:flex; height:100%; align-items:center; justify-content:center;">
-                            从左侧点击文件以预览源码
+                    <div class="file-content" style="flex: 1; padding: 16px; background: #fff;">
+                        <!-- Markdown Rendered Readonly Viewer -->
+                        <div id="file-viewer" class="markdown-body" style="width: 100%; height: 100%; border: 1px solid var(--border); border-radius: 4px; padding: 16px; box-sizing: border-box; overflow-y: auto;">
+                            <div style="color:var(--text-muted); font-size:13px; display:flex; height:100%; align-items:center; justify-content:center;">
+                                请从左侧点击文件以预览源码
+                            </div>
                         </div>
                     </div>
                 </div>

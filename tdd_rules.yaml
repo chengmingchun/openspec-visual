@@ -1,0 +1,7 @@
+rules:
+    - name: Given/When/Then
+      description: 核心逻辑需求必须包含 Given/When/Then 关键字
+      regex: (?i)(given.*when.*then)
+    - name: Markdown Format
+      description: 产物必须是标准的 Markdown 结构
+      regex: ^#\s+

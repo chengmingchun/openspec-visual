@@ -2,10 +2,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const viewSettings = document.getElementById('view-settings');
     const viewWorkflow = document.getElementById('view-workflow');
     const viewFiles = document.getElementById('view-files');
+    const viewTdd = document.getElementById('view-tdd');
+    const viewHistory = document.getElementById('view-history');
     
     const navSettings = document.getElementById('nav-settings');
     const navWorkflow = document.getElementById('nav-workflow');
     const navFiles = document.getElementById('nav-files');
+    const navTdd = document.getElementById('nav-tdd');
+    const navHistory = document.getElementById('nav-history');
 
     const cfgUrl = document.getElementById('cfg-url');
     const cfgKey = document.getElementById('cfg-key');
@@ -22,6 +26,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnViewFiles = document.getElementById('btn-view-files');
     const fileTreeContainer = document.getElementById('file-tree-container');
     const fileViewer = document.getElementById('file-viewer');
+
+    // Review Panel Elements
+    const pendingReviewPanel = document.getElementById('pending-review-panel');
+    const pendingSkillBadge = document.getElementById('pending-skill-badge');
+    const botChecks = document.getElementById('bot-checks');
+    const reviewFeedback = document.getElementById('review-feedback');
+    const btnApprove = document.getElementById('btn-approve');
+    const btnReject = document.getElementById('btn-reject');
 
     let apiKeyStr = "";
     let hasConfig = false;
@@ -41,8 +53,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function switchView(view) {
-        [viewWorkflow, viewSettings, viewFiles].forEach(v => v.classList.add('hidden'));
-        [navWorkflow, navSettings, navFiles].forEach(v => v.classList.remove('active'));
+        [viewWorkflow, viewSettings, viewFiles, viewTdd, viewHistory].forEach(v => Math.abs(v && v.classList.add('hidden')));
+        [navWorkflow, navSettings, navFiles, navTdd, navHistory].forEach(v => Math.abs(v && v.classList.remove('active')));
 
         if (view === 'settings') {
             viewSettings.classList.remove('hidden');
@@ -51,6 +63,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             viewFiles.classList.remove('hidden');
             navFiles.classList.add('active');
             refreshFileTree();
+        } else if (view === 'tdd') {
+            viewTdd.classList.remove('hidden');
+            navTdd.classList.add('active');
+            navTdd.style.color = '';
+            navTdd.style.animation = ''; // Cancel pulses
+        } else if (view === 'history') {
+            viewHistory.classList.remove('hidden');
+            navHistory.classList.add('active');
         } else {
             viewWorkflow.classList.remove('hidden');
             navWorkflow.classList.add('active');
@@ -60,7 +80,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     navSettings.onclick = () => switchView('settings');
     navWorkflow.onclick = () => switchView('workflow');
     navFiles.onclick = () => switchView('files');
-    btnViewFiles.onclick = () => switchView('files');
+    navTdd.onclick = () => switchView('tdd');
+    navHistory.onclick = () => switchView('history');
 
     btnSaveCfg.onclick = async () => {
         try {
@@ -148,9 +169,89 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `).join('');
             }
         });
+
+        // Update History Timeline View
+        const historyTimeline = document.getElementById('history-timeline');
+        if (reports.length > 0) {
+            historyTimeline.innerHTML = reports.map((r, idx) => `
+                <div style="border-left: 2px solid var(--accent); padding-left: 16px; margin-bottom: 24px; position: relative;">
+                    <div style="position: absolute; left: -5px; top: 0; width: 8px; height: 8px; background: var(--accent); border-radius: 50%;"></div>
+                    <div style="font-weight: 500; font-family: monospace; font-size: 13px; color: var(--text-main);">迭代拦截位 #${idx+1}： 触发技能 <b>[${r.skill_name}]</b></div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">🎯 拦截节点：执行状态 [${r.status}]；相关文件：<code>${r.file_path || 'Unknown'}</code></div>
+                </div>
+            `).reverse().join('');
+        }
     }
 
-    setInterval(pollAgentReports, 1500);
+    let isReviewPanelOpen = false;
+
+    async function pollPendingReview() {
+        if (!viewWorkflow.classList.contains('hidden') && !isReviewPanelOpen) {
+            try {
+                const res = await fetch("http://127.0.0.1:38192/api/pending");
+                if (res.ok) {
+                    const pending = await res.json();
+                    if (pending && pending.request && pending.request.skill_name) {
+                        isReviewPanelOpen = true;
+                        showPendingReview(pending);
+                    }
+                }
+            } catch (e) {
+                // Silently fail
+            }
+        }
+    }
+
+    function showPendingReview(pending) {
+        pendingSkillBadge.textContent = pending.request.skill_name;
+        
+        botChecks.innerHTML = pending.checker_results.map(ch => {
+            const icon = ch.passed ? '✅' : '❌';
+            const color = ch.passed ? 'var(--success)' : '#e00';
+            return `<div style="color:${color}; margin-bottom:4px;"><span style="display:inline-block;width:20px;">${icon}</span> [<b>${ch.rule_name}</b>]: ${ch.message}</div>`;
+        }).join('');
+
+        reviewFeedback.value = '';
+        document.getElementById('no-review-placeholder').classList.add('hidden');
+        pendingReviewPanel.classList.remove('hidden');
+
+        // Alert user visually on Sidebar
+        if (viewTdd.classList.contains('hidden')) {
+            navTdd.style.color = '#e00';
+            navTdd.style.animation = 'pulse 1s infinite alternate';
+        }
+    }
+
+    btnApprove.onclick = async () => {
+        await submitReviewDecision(true, "通过");
+    };
+
+    btnReject.onclick = async () => {
+        const feedback = reviewFeedback.value.trim() || "未提供反馈意见。";
+        await submitReviewDecision(false, feedback);
+    };
+
+    async function submitReviewDecision(approved, feedback) {
+        try {
+            await fetch("http://127.0.0.1:38192/api/review", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ approved, feedback })
+            });
+            pendingReviewPanel.classList.add('hidden');
+            document.getElementById('no-review-placeholder').classList.remove('hidden');
+            navTdd.style.color = '';
+            navTdd.style.animation = '';
+            isReviewPanelOpen = false;
+        } catch (e) {
+            alert("提交审批决策失败：" + e);
+        }
+    }
+
+    setInterval(() => {
+        pollAgentReports();
+        pollPendingReview();
+    }, 1500);
 
     // File Tree Fetch & Render
     async function refreshFileTree() {
@@ -191,7 +292,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 try {
                     const res = await fetch("http://127.0.0.1:38192/api/read?path=" + encodeURIComponent(node.path));
                     const content = await res.text();
-                    fileViewer.innerHTML = `<h3 style="margin-bottom:16px">${node.name}</h3><pre>${escapeHtml(content)}</pre>`;
+                    if (node.path.endsWith('.md') || node.path.endsWith('.mdx')) {
+                        fileViewer.innerHTML = `<div class="markdown-body" style="text-align:left;">${window.marked.parse(content)}</div>`;
+                    } else {
+                        fileViewer.innerHTML = `<h3 style="margin-bottom:16px">${node.name}</h3><pre>${escapeHtml(content)}</pre>`;
+                    }
                 } catch(error) {
                     fileViewer.innerHTML = 'Failed to load file.';
                 }

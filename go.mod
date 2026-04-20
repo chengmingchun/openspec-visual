@@ -6,6 +6,7 @@ require (
 	github.com/go-git/go-git/v5 v5.18.0
 	github.com/gofiber/fiber/v2 v2.52.12
 	github.com/wailsapp/wails/v3 v3.0.0-alpha.7
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (

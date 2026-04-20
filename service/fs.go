@@ -67,13 +67,6 @@ func (s *FSService) GenerateOpenSpecStructure(featureName string, content string
 		ioutil.WriteFile(projectPath, []byte("# 项目级别约定\n\n- 缩进: 4空格\n- API响应: RESTful JSON\n- AI契约引擎: OpenSpec v1\n"), 0644)
 	}
 
-	// 动态注入规则/工作流配置 .cursorrules
-	cursorRulesPath := ".cursorrules"
-	cursorRulesContent := "{\n  \"workflows\": [\"openspec-visualizer reporting\"]\n}\n"
-	if _, err := os.Stat(cursorRulesPath); os.IsNotExist(err) {
-		ioutil.WriteFile(cursorRulesPath, []byte(cursorRulesContent), 0644)
-	}
-
 	return nil
 }
 

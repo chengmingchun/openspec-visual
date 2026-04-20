@@ -4,6 +4,7 @@ import (
 	"embed"
 	"encoding/json"
 	"log"
+	"os"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
@@ -41,12 +42,22 @@ func (o *OpenSpecWailsService) GetTasks() string {
 }
 
 func Run(assets embed.FS) {
+	cwd, _ := os.Getwd()
+	cfgSvc := service.NewConfigService()
+	agentConfig, err := cfgSvc.EnsureAgentConfig(cwd)
+	if err == nil {
+		cfgSvc.InjectCursorRules(cwd, agentConfig)
+		log.Println("成功装载 openspec.yaml 并热注入 .cursorrules 到", cwd)
+	} else {
+		log.Printf("无法生成/读取 Agent 配置文件: %v\n", err)
+	}
+
 	fsSvc := service.NewFSService()
 	llmSvc := service.NewLLMService()
 	archiveSvc := service.NewArchiveService()
-	mockReviewer := service.NewMockReviewer()
+	interactiveReviewer := service.NewInteractiveReviewer()
 
-	apiHandlers := api.NewHandlers(fsSvc, llmSvc, mockReviewer, archiveSvc)
+	apiHandlers := api.NewHandlers(fsSvc, llmSvc, interactiveReviewer, archiveSvc)
 	fiberApp := api.SetupRouter(apiHandlers)
 
 	go func() {
@@ -83,7 +94,7 @@ func Run(assets embed.FS) {
 		},
 	})
 
-	err := app.Run()
+	err = app.Run()
 	if err != nil {
 		log.Fatal(err)
 	}

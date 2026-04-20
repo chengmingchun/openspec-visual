@@ -1,167 +1,46 @@
 # OpenSpec Visualizer
 
-A visual interface for OpenSpec - a specification-driven AI coding tool that helps manage AI-assisted development workflows.
+> 基于“控制反转 (Control Inversion)”与“Agent 劫持 (Agent Hijacking)”的 AI 结对编程协作系统。
 
-## Overview
+**在以往传统的架构中，AI 辅助工具是我们主动发起请求调用大模型的“执行器”。而在本架构中，系统转变为“被动裁判与监听大盘”。** 
+真正干活的是集成在 IDE 里的 Agent（如 Cursor / Windsurf），我们通过向工作区动态注入强约束配置，给 Agent 划定不可逾越的行为“法律”，迫使它按需作业并主动向本系统发起进度汇报。
 
-OpenSpec Visualizer provides a graphical interface to interact with OpenSpec, a tool that solves the "alignment problem" in AI coding by using specification-driven development (SDD). This application helps you visualize and manage OpenSpec workflows, specifications, and changes.
+## 🎯 核心设计哲学：从“主动驱使”变为“被动裁判”
 
-## Features
+以前的 AI 工具由人类主动抛送 Prompt 触发请求。
+而本系统不主动向大模型发送 Prompt，而是通过向工作区**动态写入受控的配置文件**（将其策略约束载入 `.cursorrules` 等规则文件中），强行划定 Agent 的行为和思维边界。并用一套强硬的“打点汇报机制”约束它：
+**“Agent 每做完一个规定动作，必须主动向本地监控系统发起状态汇报，系统验证评审点亮绿灯后才能继续进行下一阶段。”**
 
-- **Visual Specification Management**: Browse and edit OpenSpec specifications through a user-friendly interface
-- **Change Tracking**: Monitor active changes and their progress
-- **AI Integration**: Connect with AI models for specification generation and code implementation
-- **Real-time Updates**: See changes reflected immediately in the visual interface
-- **Project Context Management**: Maintain project-specific configurations and rules
+## 🏗️ 系统核心架构与模块分工
 
-## Project Structure
+### 1. 配置载入引擎 (`yaml` -> `.cursorrules`)
+摒弃长篇大论的散装规则，系统将工作流规范、大段 Prompt 词汇和被允许的具体技能（skills: propose / validate / apply / archive 等）完全收敛到一个全局的 `openspec.yaml` 配置文件中。
+当 OpenSpec Visualizer 启动时，它会自动解析该 YAML 文件，渲染规则模板并**强行覆盖写入**宿主的 `.cursorrules` (或对等的 AI 环境规则文件)。此时，IDE 内的 Agent 被瞬间赋予了定制化具有极强约束性的“工作流记忆”。
 
-```
-openspec-visualizer/
-├── frontend/              # Web interface (HTML/CSS/JS)
-│   ├── index.html        # Main application page
-│   ├── style.css         # Styling
-│   └── main.js           # Frontend logic
-├── openspec/             # OpenSpec configuration and examples
-│   ├── specs/            # System specifications
-│   ├── changes/          # Active changes
-│   └── project.md        # Project documentation
-├── spec.md               # Complete OpenSpec specification guide
-├── main.go              # Application entry point
-├── server.go            # HTTP server implementation
-├── ai.go                # AI integration logic
-├── fs.go                # File system operations
-├── go.mod               # Go module dependencies
-└── go.sum               # Go dependency checksums
-```
+### 2. 本地评审服务节点 (`Fiber API & Reviewer`)
+以 `gofiber` 构建极高性能的本地守护进程（监听运行于 `127.0.0.1:38192`）。
+Agent 在 IDE 里运作时（如起草好了一阶段的 `proposal.md`），即按照注入约束的指令，向后台自动发起 `POST /api/report` 的 JSON 格式工作状态回调。
+我们的系统后台可以挂靠接入强大的审查引擎 (Reviewer)。对每次流转产物进行检验：不合格打回给 Agent 使其就地修正 (返回 HTTP 400 附带修改意见)，合格则放行 (返回 HTTP 200)。
 
-## OpenSpec Specification
+### 3. 物理隔离的文件流与版本溯源控制 (`FS & Archive`)
+所有的任务逻辑都不只存在于短期会话记忆中，而被彻底落盘成了真实的物理 Markdown 文档。
+* `changes/` 隔离正在临时处理的阶段性需求。
+* `specs/` 持久化且高度唯一地存放了该业务的核心真理规范。
+全部流程自动化跑通闭环后，后端自动对接 Git，直接落位到底层代码与文档版本系统上。
 
-The `spec.md` file contains a comprehensive guide to OpenSpec based on the official user guide, covering:
+### 4. 全景式只读监控前端 (Agent Dashboard)
+抛除所有传统界面的“生成”、“下一步”主动操作。这使得前端仪表盘变为了一个纯粹的、高度工业化的只读监控探头。
+* 前端通过短周期轮询，不断去读取后台内存收到的汇报历史日志。
+* 开发者仅仅是以日常姿态在 Cursor 内聊天，而伴随 Agent 的执行进展，屏幕侧边的 OpenSpec 仪表盘流水线面板将在后台事件的推送下，像车间传送带一样将进度节点依次推高、实时点绿，并在下沉区域持续渲染报告流水日志。让开发者享受到绝对的架构心智掌控感。
 
-- **Core Concepts**: Specs, Changes, Delta Specs
-- **Workflow**: Proposal → Specs → Design → Tasks
-- **Commands**: `/opsx:propose`, `/opsx:explore`, `/opsx:apply`, `/opsx:archive`
-- **Best Practices**: Progressive strictness, one-change-one-responsibility
-- **Configuration**: `config.yaml` setup and schema customization
+## 🔄 全景工作流场景演示 (Workflow Lifecycle)
 
-## Getting Started
+1. **注入启动**：启动 Visualizer 客户端，系统按照预设模型接管环境，给项目中注入 Agent 限制规则。拉起本地服务与前端大盘。
+2. **提需唤起**：开发者在 IDE 的 AI 侧边栏/对话框下发意图：“用 OpenSpec 流程进行深色模式支持”。
+3. **劫持生效 (Stage 1)**：Agent 读取到我们制定的规则，乖乖触发第一步的 `propose` 技能开始起草方案。做完后，主动 curl 报告：我完成了。大盘闪烁 `Stage 1` 激活。
+4. **验证放行 & 稳步推进 (Stage 2 & 3)**：本地接口抓取汇报无误便给出绿灯；Agent 收悉再继续发起下一阶段任务 `validate` (剥离提纯差异和边界)，然后向代码区进发 `apply` 进行需求降维攻击并产出代码，每完成一环，前端大盘的节点逐一推进。
+5. **归档落闭 (Stage 4)**：全部动作执行完成后，服务端封卷整合提交所有的更新日志。流水线上全盘皆亮，等待下一次发号施令。
 
-### Prerequisites
-- Go 1.21 or later
-- Node.js (for frontend development)
-- Git
+---
 
-### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/chengmingchun/openspec-visual.git
-   cd openspec-visual
-   ```
-
-2. Install dependencies:
-   ```bash
-   go mod download
-   ```
-
-3. Build the application:
-   ```bash
-   go build -o openspec-visualizer.exe
-   ```
-
-4. Run the application:
-   ```bash
-   ./openspec-visualizer.exe
-   ```
-
-5. Open your browser and navigate to `http://localhost:8080`
-
-## Usage
-
-1. **Initialize OpenSpec**: Use the interface to initialize OpenSpec in your project
-2. **Create Specifications**: Define system behavior using the visual editor
-3. **Manage Changes**: Track active changes and their progress
-4. **Generate Code**: Use AI to generate code based on specifications
-5. **Archive Changes**: Complete and archive finished changes
-
-## OpenSpec Commands
-
-The application supports the following OpenSpec commands:
-
-### Core Commands
-- `/opsx:propose` - Generate complete change artifacts
-- `/opsx:explore` - Research without creating files
-- `/opsx:apply` - Execute implementation tasks
-- `/opsx:archive` - Archive completed changes
-
-### Expanded Commands
-- `/opsx:new` - Create change skeleton
-- `/opsx:continue` - Generate next artifact
-- `/opsx:ff` - Fast-forward generate all artifacts
-- `/opsx:verify` - Validate implementation against specs
-- `/opsx:sync` - Sync specs without archiving
-- `/opsx:bulk-archive` - Archive multiple changes
-
-## Configuration
-
-Configure OpenSpec through `openspec/config.yaml`:
-
-```yaml
-schema: spec-driven
-
-context: |
-  Tech Stack: TypeScript, React 18, Node.js, PostgreSQL
-  API Style: RESTful
-  Test Framework: Vitest + React Testing Library
-  Code Standards: ESLint
-
-rules:
-  proposal:
-    - Must include rollback plan
-    - Must specify affected module scope
-  specs:
-    - Use Given/When/Then format for test scenarios
-```
-
-## Development
-
-### Backend (Go)
-The backend is built with Go and provides:
-- HTTP server for frontend communication
-- File system operations for OpenSpec management
-- AI model integration for specification processing
-
-### Frontend (HTML/JS/CSS)
-The frontend is a single-page application with:
-- Real-time specification visualization
-- Interactive change management
-- Responsive design for different screen sizes
-
-### Building from Source
-```bash
-# Build for production
-go build -ldflags="-s -w" -o openspec-visualizer.exe
-
-# Development mode with hot reload (requires air)
-air
-```
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- OpenSpec by Fission AI for the specification-driven development paradigm
-- The AI coding community for inspiration and best practices
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+> Agent 是具有极强代码实现能动性但同样极其容易偏离轨道的性能跑车，而 OpenSpec 就是强行焊在这个赛道两侧并且自带测速排雷探头的绝对铁轨。
